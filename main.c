@@ -95,9 +95,6 @@ int main()
     while (!done)
     {
         opcode = memory[cpu6502.PC++];
-        printf("opcode: 0x%02X\n", opcode);
-
-        // printf("PC: %d\n", cpu6502.PC);
 
         switch (opcode)
         {
@@ -132,7 +129,7 @@ int main()
     printf("Register A: 0x%02X\n", cpu6502.A);
     printf("Register X: 0x%02X\n", cpu6502.X);
     printf("Register Y: 0x%02X\n", cpu6502.Y);
-    // printf("PC: %d\n", cpu6502.PC);
+    printf("PC: %d\n", cpu6502.PC);
 
     return 0;
 }
