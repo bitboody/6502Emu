@@ -45,7 +45,7 @@ void lda_absolute(CPU *cpu)
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
     cpu->A = memory[addr];
-    cpu->PC++;
+    cpu->PC += 2;
 }
 
 void ldx_immediate(CPU *cpu)
@@ -58,7 +58,7 @@ void ldx_absolute(CPU *cpu)
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
     cpu->X = memory[addr];
-    cpu->PC++;
+    cpu->PC += 2;
 }
 
 void ldy_immediate(CPU *cpu)
@@ -71,7 +71,7 @@ void ldy_absolute(CPU *cpu)
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
     cpu->Y = memory[addr];
-    cpu->PC++;
+    cpu->PC += 2;
 }
 
 int main()
@@ -95,8 +95,9 @@ int main()
     while (!done)
     {
         opcode = memory[cpu6502.PC++];
+        printf("opcode: 0x%02X\n", opcode);
 
-        printf("PC: %d\n", cpu6502.PC);
+        // printf("PC: %d\n", cpu6502.PC);
 
         switch (opcode)
         {
@@ -121,6 +122,10 @@ int main()
         case OP_BRK:
             done = 1;
             break;
+            default:
+                printf("Unknown opcode: 0x%02X\n", opcode);
+                done = 1;
+                break;
         }
     }
 
