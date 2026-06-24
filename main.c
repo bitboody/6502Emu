@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <memory.h>
 
+// Flags
 #define FLAG_C 0x01
 #define FLAG_Z 0x02
 #define FLAG_I 0x04
@@ -10,6 +11,15 @@
 #define FLAG_U 0x20
 #define FLAG_V 0x40
 #define FLAG_N 0x80
+
+// Instructions
+#define OP_BRK 0x00
+#define OP_LDA_IMM 0xA9
+#define OP_LDA_ABS 0xAD
+#define OP_LDX_IMM 0xA2
+#define OP_LDX_ABS 0xAE
+#define OP_LDY_IMM 0xA0
+#define OP_LDY_ABS 0xAC
 
 uint8_t memory[65536];
 
@@ -70,12 +80,12 @@ int main()
     memset(&cpu6502, 0, sizeof(cpu6502)); // Initialize CPU registers 0
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
-    memory[0] = 0xAD; // instruction LDA opcode
+    memory[0] = 0xAC; // instruction LDY_ABS opcode
 
     memory[1] = 0x00; // low byte
     memory[2] = 0x10; // high byte
 
-    memory[3] = 0xA9; // instruction LDA opcode
+    memory[3] = 0xA9; // instruction LDA_IMM opcode
     memory[4] = 0x10; // value passed to instruction
 
     memory[0x1000] = 0x50; // value passed to instruction
@@ -86,37 +96,38 @@ int main()
     {
         opcode = memory[cpu6502.PC++];
 
+        printf("PC: %d\n", cpu6502.PC);
+
         switch (opcode)
         {
-        case 0xA9:
+        case OP_LDA_IMM:
             lda_immediate(&cpu6502);
             break;
-        case 0xAD:
+        case OP_LDA_ABS:
             lda_absolute(&cpu6502);
             break;
-        case 0xA2:
+        case OP_LDX_IMM:
             ldx_immediate(&cpu6502);
             break;
-        case 0xAE:
+        case OP_LDX_ABS:
             ldx_absolute(&cpu6502);
             break;
-        case 0xA0:
+        case OP_LDY_IMM:
             ldy_immediate(&cpu6502);
             break;
-        case 0xAC:
+        case OP_LDY_ABS:
             ldy_absolute(&cpu6502);
             break;
-        case 0x00:
-            done = 1;
-        default:
-            printf("Unknown opcode: 0x%02X\n", opcode);
+        case OP_BRK:
             done = 1;
             break;
         }
     }
 
     printf("Register A: 0x%02X\n", cpu6502.A);
-    printf("PC: %d\n", cpu6502.PC);
+    printf("Register X: 0x%02X\n", cpu6502.X);
+    printf("Register Y: 0x%02X\n", cpu6502.Y);
+    // printf("PC: %d\n", cpu6502.PC);
 
     return 0;
 }
