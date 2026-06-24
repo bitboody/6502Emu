@@ -20,6 +20,12 @@
 #define OP_LDX_ABS 0xAE
 #define OP_LDY_IMM 0xA0
 #define OP_LDY_ABS 0xAC
+#define OP_TAX 0xAA
+#define OP_TAY 0xA8
+#define OP_TYA 0x98
+#define OP_TXA 0x8A
+#define OP_TSX 0xBA
+#define OP_TXS 0x9A
 
 uint8_t memory[65536];
 
@@ -74,6 +80,36 @@ void ldy_absolute(CPU *cpu)
     cpu->PC += 2;
 }
 
+void tax(CPU *cpu)
+{
+    cpu->X = cpu->A;
+}
+
+void tay(CPU *cpu)
+{
+    cpu->Y = cpu->A;
+}
+
+void tya(CPU *cpu)
+{
+    cpu->A = cpu->Y;
+}
+
+void txa(CPU *cpu)
+{
+    cpu->A = cpu->X;
+}
+
+void tsx(CPU *cpu)
+{
+    cpu->X = cpu->SP;
+}
+
+void txs(CPU *cpu)
+{
+    cpu->SP = cpu->X;
+}
+
 int main()
 {
     CPU cpu6502;
@@ -89,6 +125,8 @@ int main()
     memory[4] = 0x10; // value passed to instruction
 
     memory[0x1000] = 0x50; // value passed to instruction
+
+    memory[5] = 0xAA; // instruction TAX opcode
 
     uint8_t opcode;
     int done = 0;
@@ -116,19 +154,38 @@ int main()
         case OP_LDY_ABS:
             ldy_absolute(&cpu6502);
             break;
+        case OP_TAX:
+            tax(&cpu6502);
+            break;
+        case OP_TAY:
+            tay(&cpu6502);
+            break;
+        case OP_TYA:
+            tya(&cpu6502);
+            break;
+        case OP_TXA:
+            txa(&cpu6502);
+            break;
+        case OP_TSX:
+            tsx(&cpu6502);
+            break;
+        case OP_TXS:
+            txs(&cpu6502);
+            break;
         case OP_BRK:
             done = 1;
             break;
-            default:
-                printf("Unknown opcode: 0x%02X\n", opcode);
-                done = 1;
-                break;
+        default:
+            printf("Unknown opcode: 0x%02X\n", opcode);
+            done = 1;
+            break;
         }
     }
 
     printf("Register A: 0x%02X\n", cpu6502.A);
     printf("Register X: 0x%02X\n", cpu6502.X);
     printf("Register Y: 0x%02X\n", cpu6502.Y);
+    printf("Register SP: 0x%02X\n", cpu6502.SP);
     printf("PC: %d\n", cpu6502.PC);
 
     return 0;
