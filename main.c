@@ -222,16 +222,66 @@ int main()
     memset(&cpu6502, 0, sizeof(cpu6502)); // Initialize CPU registers 0
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
-    memory[0] = 0xA9; // LDA_IMM
-    memory[1] = 0x42; // A = 0x42
+    memory[0x1000] = 0x05;
+    memory[0x1001] = 0x42;
+    memory[0x1002] = 0x99;
 
-    memory[2] = 0xAA; // TAX (X = A)
+    // ---------- Load registers ----------
 
-    memory[3] = 0x8E; // STX_ABS
-    memory[4] = 0x00; // low byte
-    memory[5] = 0x10; // high byte
+    memory[0] = 0xA9; // LDA #$12
+    memory[1] = 0x12;
 
-    memory[6] = 0x00; // BRK
+    memory[2] = 0xAA; // TAX
+
+    memory[3] = 0xA8; // TAY
+
+    memory[4] = 0xE8; // INX
+    memory[5] = 0xC8; // INY
+
+    memory[6] = 0xCA; // DEX
+    memory[7] = 0x88; // DEY
+
+    memory[8] = 0x98; // TYA
+    memory[9] = 0x8A; // TXA
+
+    // ---------- Absolute loads ----------
+
+    memory[10] = 0xAC; // LDY $1000
+    memory[11] = 0x00;
+    memory[12] = 0x10;
+
+    memory[13] = 0xAE; // LDX $1001
+    memory[14] = 0x01;
+    memory[15] = 0x10;
+
+    memory[16] = 0xAD; // LDA $1002
+    memory[17] = 0x02;
+    memory[18] = 0x10;
+
+    // ---------- Stack transfers ----------
+
+    memory[19] = 0x9A; // TXS
+    memory[20] = 0xBA; // TSX
+
+    // ---------- STX Zero Page ----------
+
+    memory[21] = 0x86;
+    memory[22] = 0x20;
+
+    // ---------- STX Zero Page,Y ----------
+
+    memory[23] = 0x96;
+    memory[24] = 0x30;
+
+    // ---------- STX Absolute ----------
+
+    memory[25] = 0x8E;
+    memory[26] = 0x00;
+    memory[27] = 0x20;
+
+    // ---------- BRK ----------
+
+    memory[28] = 0x00;
 
     uint8_t opcode;
     int done = 0;
@@ -312,7 +362,13 @@ int main()
     printf("Register X: 0x%02X\n", cpu6502.X);
     printf("Register Y: 0x%02X\n", cpu6502.Y);
     printf("Register SP: 0x%02X\n", cpu6502.SP);
-    printf("memory[0x1000] = 0x%02X\n", memory[0x1000]);
+
+    printf("\n");
+
+    printf("memory[0x20]   = 0x%02X\n", memory[0x20]);
+    printf("memory[0x35]   = 0x%02X\n", memory[0x35]);
+    printf("memory[0x2000] = 0x%02X\n", memory[0x2000]);
+
     printf("PC: %d\n", cpu6502.PC);
 
     return 0;
