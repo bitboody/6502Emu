@@ -61,7 +61,7 @@ void set_flag(CPU *cpu, uint8_t flag, uint8_t value)
 }
 
 // Instruction set
-void lda_immediate(CPU *cpu)
+void lda_imm(CPU *cpu)
 {
     cpu->A = memory[cpu->PC++];
 
@@ -69,7 +69,7 @@ void lda_immediate(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->A & 0x80);
 }
 
-void lda_absolute(CPU *cpu)
+void lda_abs(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
@@ -80,7 +80,7 @@ void lda_absolute(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->A & 0x80);
 }
 
-void ldx_immediate(CPU *cpu)
+void ldx_imm(CPU *cpu)
 {
     cpu->X = memory[cpu->PC++];
 
@@ -88,7 +88,7 @@ void ldx_immediate(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->X & 0x80);
 }
 
-void ldx_absolute(CPU *cpu)
+void ldx_abs(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
@@ -99,7 +99,7 @@ void ldx_absolute(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->X & 0x80);
 }
 
-void ldy_immediate(CPU *cpu)
+void ldy_imm(CPU *cpu)
 {
     cpu->Y = memory[cpu->PC++];
 
@@ -107,7 +107,7 @@ void ldy_immediate(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->Y & 0x80);
 }
 
-void ldy_absolute(CPU *cpu)
+void ldy_abs(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
@@ -207,7 +207,7 @@ void stx_zp_y(CPU *cpu)
     memory[addr] = cpu->X;
 }
 
-void stx_absolute(CPU *cpu)
+void stx_abs(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
 
@@ -242,22 +242,22 @@ int main()
         switch (opcode)
         {
         case OP_LDA_IMM:
-            lda_immediate(&cpu6502);
+            lda_imm(&cpu6502);
             break;
         case OP_LDA_ABS:
-            lda_absolute(&cpu6502);
+            lda_abs(&cpu6502);
             break;
         case OP_LDX_IMM:
-            ldx_immediate(&cpu6502);
+            ldx_imm(&cpu6502);
             break;
         case OP_LDX_ABS:
-            ldx_absolute(&cpu6502);
+            ldx_abs(&cpu6502);
             break;
         case OP_LDY_IMM:
-            ldy_immediate(&cpu6502);
+            ldy_imm(&cpu6502);
             break;
         case OP_LDY_ABS:
-            ldy_absolute(&cpu6502);
+            ldy_abs(&cpu6502);
             break;
         case OP_TAX:
             tax(&cpu6502);
@@ -296,7 +296,7 @@ int main()
             stx_zp_y(&cpu6502);
             break;
         case OP_STX_ABS:
-            stx_absolute(&cpu6502);
+            stx_abs(&cpu6502);
             break;
         case OP_BRK:
             done = 1;
