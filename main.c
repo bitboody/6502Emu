@@ -14,22 +14,29 @@
 
 // Instructions
 #define OP_BRK 0x00
+
 #define OP_LDA_IMM 0xA9
 #define OP_LDA_ABS 0xAD
 #define OP_LDX_IMM 0xA2
 #define OP_LDX_ABS 0xAE
 #define OP_LDY_IMM 0xA0
 #define OP_LDY_ABS 0xAC
+
 #define OP_TAX 0xAA
 #define OP_TAY 0xA8
 #define OP_TYA 0x98
 #define OP_TXA 0x8A
 #define OP_TSX 0xBA
 #define OP_TXS 0x9A
+
 #define OP_INX 0xE8
 #define OP_INY 0xC8
 #define OP_DEX 0xCA
 #define OP_DEY 0x88
+
+#define OP_STX_ZP 0x86
+#define OP_STX_ZP_Y 0x96
+#define OP_STX_ABS 0x8E
 
 uint8_t memory[65536];
 
@@ -188,25 +195,43 @@ void dey(CPU *cpu)
     set_flag(cpu, FLAG_N, cpu->Y & 0x80);
 }
 
+void stx_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    memory[addr] = cpu->X;
+}
+
+void stx_zp_y(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->Y;
+    memory[addr] = cpu->X;
+}
+
+void stx_absolute(CPU *cpu)
+{
+    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
+
+    memory[addr] = cpu->X;
+
+    cpu->PC += 2;
+}
+
 int main()
 {
     CPU cpu6502;
     memset(&cpu6502, 0, sizeof(cpu6502)); // Initialize CPU registers 0
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
-    memory[0x1000] = 0x50; // value passed to instruction
+    memory[0] = 0xA9; // LDA_IMM
+    memory[1] = 0x42; // A = 0x42
 
-    memory[0] = 0xAC; // instruction LDY_ABS opcode
+    memory[2] = 0xAA; // TAX (X = A)
 
-    memory[1] = 0x00; // low byte
-    memory[2] = 0x10; // high byte
+    memory[3] = 0x8E; // STX_ABS
+    memory[4] = 0x00; // low byte
+    memory[5] = 0x10; // high byte
 
-    memory[3] = 0xA9; // instruction LDA_IMM opcode
-    memory[4] = 0x10; // value passed to instruction
-
-    memory[6] = 0xC8; // increment y
-
-    memory[5] = 0xAA; // instruction TAX opcode
+    memory[6] = 0x00; // BRK
 
     uint8_t opcode;
     int done = 0;
@@ -264,6 +289,15 @@ int main()
         case OP_DEY:
             dey(&cpu6502);
             break;
+        case OP_STX_ZP:
+            stx_zp(&cpu6502);
+            break;
+        case OP_STX_ZP_Y:
+            stx_zp_y(&cpu6502);
+            break;
+        case OP_STX_ABS:
+            stx_absolute(&cpu6502);
+            break;
         case OP_BRK:
             done = 1;
             break;
@@ -278,6 +312,7 @@ int main()
     printf("Register X: 0x%02X\n", cpu6502.X);
     printf("Register Y: 0x%02X\n", cpu6502.Y);
     printf("Register SP: 0x%02X\n", cpu6502.SP);
+    printf("memory[0x1000] = 0x%02X\n", memory[0x1000]);
     printf("PC: %d\n", cpu6502.PC);
 
     return 0;
