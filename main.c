@@ -291,6 +291,9 @@ int main()
 
         switch (opcode)
         {
+        case OP_BRK:
+            done = 1;
+            break;
         case OP_LDA_IMM:
             lda_imm(&cpu6502);
             break;
@@ -347,9 +350,6 @@ int main()
             break;
         case OP_STX_ABS:
             stx_abs(&cpu6502);
-            break;
-        case OP_BRK:
-            done = 1;
             break;
         default:
             printf("Unknown opcode: 0x%02X\n", opcode);
