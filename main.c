@@ -52,12 +52,25 @@ typedef struct
 } CPU;
 
 // Helper functions
-void set_flag(CPU *cpu, uint8_t flag, uint8_t value)
+void update_zn(CPU *cpu, int8_t value)
 {
-    if (value)
-        cpu->P |= flag;
+    if (value == 0)
+        cpu->P |= FLAG_Z;
     else
-        cpu->P &= ~flag;
+        cpu->P &= ~FLAG_Z;
+
+    if (value & FLAG_N)
+        cpu->P |= FLAG_N;
+    else
+        cpu->P &= ~FLAG_N;
+}
+
+uint16_t fetch_word(CPU *cpu)
+{
+    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
+    cpu->PC += 2;
+
+    return addr;
 }
 
 // Instruction set
@@ -65,97 +78,80 @@ void lda_imm(CPU *cpu)
 {
     cpu->A = memory[cpu->PC++];
 
-    set_flag(cpu, FLAG_Z, cpu->A == 0);
-    set_flag(cpu, FLAG_N, cpu->A & 0x80);
+    update_zn(cpu, cpu->A);
 }
 
 void lda_abs(CPU *cpu)
 {
-    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
-
+    uint16_t addr = fetch_word(cpu);
     cpu->A = memory[addr];
-    cpu->PC += 2;
 
-    set_flag(cpu, FLAG_Z, cpu->A == 0);
-    set_flag(cpu, FLAG_N, cpu->A & 0x80);
+    update_zn(cpu, cpu->A);
 }
 
 void ldx_imm(CPU *cpu)
 {
     cpu->X = memory[cpu->PC++];
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void ldx_abs(CPU *cpu)
 {
-    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
-
+    uint16_t addr = fetch_word(cpu);
     cpu->X = memory[addr];
-    cpu->PC += 2;
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void ldy_imm(CPU *cpu)
 {
     cpu->Y = memory[cpu->PC++];
 
-    set_flag(cpu, FLAG_Z, cpu->Y == 0);
-    set_flag(cpu, FLAG_N, cpu->Y & 0x80);
+    update_zn(cpu, cpu->Y);
 }
 
 void ldy_abs(CPU *cpu)
 {
-    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
-
+    uint16_t addr = fetch_word(cpu);
     cpu->Y = memory[addr];
-    cpu->PC += 2;
 
-    set_flag(cpu, FLAG_Z, cpu->Y == 0);
-    set_flag(cpu, FLAG_N, cpu->Y & 0x80);
+    update_zn(cpu, cpu->Y);
 }
 
 void tax(CPU *cpu)
 {
     cpu->X = cpu->A;
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void tay(CPU *cpu)
 {
     cpu->Y = cpu->A;
 
-    set_flag(cpu, FLAG_Z, cpu->Y == 0);
-    set_flag(cpu, FLAG_N, cpu->Y & 0x80);
+    update_zn(cpu, cpu->Y);
 }
 
 void tya(CPU *cpu)
 {
     cpu->A = cpu->Y;
 
-    set_flag(cpu, FLAG_Z, cpu->A == 0);
-    set_flag(cpu, FLAG_N, cpu->A & 0x80);
+    update_zn(cpu, cpu->A);
 }
 
 void txa(CPU *cpu)
 {
     cpu->A = cpu->X;
 
-    set_flag(cpu, FLAG_Z, cpu->A == 0);
-    set_flag(cpu, FLAG_N, cpu->A & 0x80);
+    update_zn(cpu, cpu->A);
 }
 
 void tsx(CPU *cpu)
 {
     cpu->X = cpu->SP;
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void txs(CPU *cpu) // TXS Does not affect any flags
@@ -167,32 +163,28 @@ void inx(CPU *cpu)
 {
     cpu->X++;
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void iny(CPU *cpu)
 {
     cpu->Y++;
 
-    set_flag(cpu, FLAG_Z, cpu->Y == 0);
-    set_flag(cpu, FLAG_N, cpu->Y & 0x80);
+    update_zn(cpu, cpu->Y);
 }
 
 void dex(CPU *cpu)
 {
     cpu->X--;
 
-    set_flag(cpu, FLAG_Z, cpu->X == 0);
-    set_flag(cpu, FLAG_N, cpu->X & 0x80);
+    update_zn(cpu, cpu->X);
 }
 
 void dey(CPU *cpu)
 {
     cpu->Y--;
 
-    set_flag(cpu, FLAG_Z, cpu->Y == 0);
-    set_flag(cpu, FLAG_N, cpu->Y & 0x80);
+    update_zn(cpu, cpu->Y);
 }
 
 void stx_zp(CPU *cpu)
@@ -209,11 +201,8 @@ void stx_zp_y(CPU *cpu)
 
 void stx_abs(CPU *cpu)
 {
-    uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
-
+    uint16_t addr = fetch_word(cpu);
     memory[addr] = cpu->X;
-
-    cpu->PC += 2;
 }
 
 int main()
