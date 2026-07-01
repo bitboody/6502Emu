@@ -14,6 +14,7 @@
 
 // Instructions
 #define OP_BRK 0x00
+#define OP_CLC 0x18
 
 #define OP_LDA_IMM 0xA9
 #define OP_LDA_ABS 0xAD
@@ -82,6 +83,14 @@ void update_c(CPU *cpu, int16_t value)
         cpu->P &= ~FLAG_C;
 }
 
+void update_v(CPU *cpu, uint8_t a, uint8_t b, uint8_t result)
+{
+    if (~(a ^ b) & (a ^ result) & 0x80)
+        cpu->P |= FLAG_V;
+    else
+        cpu->P &= ~FLAG_V;
+}
+
 uint16_t fetch_word(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
@@ -91,6 +100,11 @@ uint16_t fetch_word(CPU *cpu)
 }
 
 // Instruction set
+void clc(CPU *cpu)
+{
+    update_c(cpu, 0);
+}
+
 void lda_imm(CPU *cpu)
 {
     cpu->A = memory[cpu->PC++];
@@ -224,115 +238,154 @@ void stx_abs(CPU *cpu)
 
 void adc_imm(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint8_t value = memory[cpu->PC++];
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + value + carry;
+
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_abs(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint16_t addr = fetch_word(cpu);
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint8_t value = memory[addr];
+
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_abs_x(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint16_t addr = fetch_word(cpu) + cpu->X;
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint8_t value = memory[addr];
+
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_abs_y(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint16_t addr = fetch_word(cpu) + cpu->Y;
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint8_t value = memory[addr];
+
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_zp(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint8_t addr = memory[cpu->PC++];
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint8_t value = memory[addr];
+
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_zp_x(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint8_t addr = memory[cpu->PC++] + cpu->X;
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint8_t value = memory[addr];
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_indir_x(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint8_t operand = memory[cpu->PC++] + cpu->X;
-    uint8_t low = memory[operand];
+
+    uint8_t low = memory[(uint8_t)operand];
     uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = low | (high << 8);
+    uint8_t value = memory[addr];
 
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
 
-    uint16_t addr = low | (high << 8);
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
 void adc_indir_y(CPU *cpu)
 {
+    uint8_t old_a = cpu->A;
+
     uint8_t operand = memory[cpu->PC++];
-    uint8_t low = memory[operand];
+
+    uint8_t low = memory[(uint8_t)operand];
     uint8_t high = memory[(uint8_t)(operand + 1)];
+
+    uint16_t addr = (low | (high << 8)) + cpu->Y;
+    uint8_t value = memory[addr];
 
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
 
-    uint16_t addr = low | ((high << 8) + cpu->Y);
-    uint16_t result = cpu->A + memory[addr] + carry;
+    uint16_t result = old_a + value + carry;
 
     update_c(cpu, result);
 
     cpu->A = (uint8_t)result;
 
+    update_v(cpu, old_a, value, cpu->A);
     update_zn(cpu, cpu->A);
 }
 
@@ -344,10 +397,10 @@ int main()
 
     // Tests
     memory[0] = OP_LDA_IMM;
-    memory[1] = 250;
+    memory[1] = 100;
 
     memory[2] = OP_ADC_IMM;
-    memory[3] = 20;
+    memory[3] = 50;
 
     memory[4] = OP_BRK;
 
