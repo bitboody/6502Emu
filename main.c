@@ -38,6 +38,9 @@
 #define OP_STX_ZP 0x86
 #define OP_STX_ZP_Y 0x96
 #define OP_STX_ABS 0x8E
+#define OP_STY_ZP 0x84
+#define OP_STY_ZP_X 0x94
+#define OP_STY_ABS 0x8C
 
 #define OP_ADC_IMM 0x69
 #define OP_ADC_ABS 0x6D
@@ -236,6 +239,24 @@ void stx_abs(CPU *cpu)
     memory[addr] = cpu->X;
 }
 
+void sty_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    memory[addr] = cpu->Y;
+}
+
+void sty_zp_x(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    memory[addr] = cpu->Y;
+}
+
+void sty_abs(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu);
+    memory[addr] = cpu->Y;
+}
+
 void adc_imm(CPU *cpu)
 {
     uint8_t old_a = cpu->A;
@@ -396,13 +417,23 @@ int main()
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
     // Tests
-    memory[0] = OP_LDA_IMM;
-    memory[1] = 100;
+    memory[0] = 0xA0; // LDY_IMM
+    memory[1] = 0x42; // Y = 0x42
 
-    memory[2] = OP_ADC_IMM;
-    memory[3] = 50;
+    memory[2] = 0x84; // STY_ZP
+    memory[3] = 0x20; // $20 = 0x42
 
-    memory[4] = OP_BRK;
+    memory[4] = 0xA2; // LDX_IMM
+    memory[5] = 0x05; // X = 5
+
+    memory[6] = 0x94; // STY_ZP_X
+    memory[7] = 0x20; // $20 + X = $25
+
+    memory[8] = 0x8C;  // STY_ABS
+    memory[9] = 0x00;  // low byte
+    memory[10] = 0x10; // high byte ($1000)
+
+    memory[11] = 0x00; // BRK
 
     uint8_t opcode;
     int done = 0;
@@ -485,6 +516,15 @@ int main()
             break;
         case OP_STX_ABS:
             stx_abs(&cpu6502);
+            break;
+        case OP_STY_ZP:
+            sty_zp(&cpu6502);
+            break;
+        case OP_STY_ZP_X:
+            sty_zp_x(&cpu6502);
+            break;
+        case OP_STY_ABS:
+            sty_abs(&cpu6502);
             break;
 
             /* ========= ADC ========= */
