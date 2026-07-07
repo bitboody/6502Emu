@@ -35,6 +35,13 @@
 #define OP_DEX 0xCA
 #define OP_DEY 0x88
 
+#define OP_STA_ZP 0x85
+#define OP_STA_ZP_X 0x95
+#define OP_STA_ABS 0x8D
+#define OP_STA_ABS_X 0x9D
+#define OP_STA_ABS_Y 0x99
+#define OP_STA_INDIR_X 0x81
+#define OP_STA_INDIR_Y 0x91
 #define OP_STX_ZP 0x86
 #define OP_STX_ZP_Y 0x96
 #define OP_STX_ABS 0x8E
@@ -219,6 +226,58 @@ void dey(CPU *cpu)
     cpu->Y--;
 
     update_zn(cpu, cpu->Y);
+}
+
+void sta_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    memory[addr] = cpu->A;
+}
+
+void sta_zp_x(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    memory[addr] = cpu->A;
+}
+
+void sta_abs(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu);
+    memory[addr] = cpu->A;
+}
+
+void sta_abs_x(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->X;
+    memory[addr] = cpu->A;
+}
+
+void sta_abs_y(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->Y;
+    memory[addr] = cpu->A;
+}
+
+void sta_indir_x(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++] + cpu->X;
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+
+    memory[addr] = cpu->A;
+}
+
+void sta_indir_y(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++];
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
+
+    memory[addr] = cpu->A;
 }
 
 void stx_zp(CPU *cpu)
@@ -417,23 +476,58 @@ int main()
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
     // Tests
-    memory[0] = 0xA0; // LDY_IMM
-    memory[1] = 0x42; // Y = 0x42
 
-    memory[2] = 0x84; // STY_ZP
-    memory[3] = 0x20; // $20 = 0x42
+    // ----- Setup data -----
+    memory[0x1000] = 0x00;
+    memory[0x1005] = 0x00;
+    memory[0x1003] = 0x00;
+    memory[0x2000] = 0x00;
+    memory[0x3002] = 0x00;
 
-    memory[4] = 0xA2; // LDX_IMM
-    memory[5] = 0x05; // X = 5
+    // Pointer for STA ($40,X)
+    memory[0x44] = 0x00;
+    memory[0x45] = 0x20;
 
-    memory[6] = 0x94; // STY_ZP_X
-    memory[7] = 0x20; // $20 + X = $25
+    // Pointer for STA ($50),Y
+    memory[0x50] = 0x00;
+    memory[0x51] = 0x30;
 
-    memory[8] = 0x8C;  // STY_ABS
-    memory[9] = 0x00;  // low byte
-    memory[10] = 0x10; // high byte ($1000)
+    // ----- Program -----
 
-    memory[11] = 0x00; // BRK
+    memory[0] = 0xA9; // LDA #$42
+    memory[1] = 0x42;
+
+    memory[2] = 0x85; // STA $20
+    memory[3] = 0x20;
+
+    memory[4] = 0xA2; // LDX #$05
+    memory[5] = 0x05;
+
+    memory[6] = 0x95; // STA $20,X
+    memory[7] = 0x20;
+
+    memory[8] = 0x8D; // STA $1000
+    memory[9] = 0x00;
+    memory[10] = 0x10;
+
+    memory[11] = 0x9D; // STA $1000,X
+    memory[12] = 0x00;
+    memory[13] = 0x10;
+
+    memory[14] = 0xA0; // LDY #$03
+    memory[15] = 0x03;
+
+    memory[16] = 0x99; // STA $1000,Y
+    memory[17] = 0x00;
+    memory[18] = 0x10;
+
+    memory[19] = 0x81; // STA ($40,X)
+    memory[20] = 0x3F; // 0x3F + X = 0x44
+
+    memory[21] = 0x91; // STA ($50),Y
+    memory[22] = 0x50;
+
+    memory[23] = 0x00; // BRK
 
     uint8_t opcode;
     int done = 0;
@@ -507,7 +601,27 @@ int main()
             break;
 
             /* ========= STORE ========= */
-
+        case OP_STA_ZP:
+            sta_zp(&cpu6502);
+            break;
+        case OP_STA_ZP_X:
+            sta_zp_x(&cpu6502);
+            break;
+        case OP_STA_ABS:
+            sta_abs(&cpu6502);
+            break;
+        case OP_STA_ABS_X:
+            sta_abs_x(&cpu6502);
+            break;
+        case OP_STA_ABS_Y:
+            sta_abs_y(&cpu6502);
+            break;
+        case OP_STA_INDIR_X:
+            sta_indir_x(&cpu6502);
+            break;
+        case OP_STA_INDIR_Y:
+            sta_indir_y(&cpu6502);
+            break;
         case OP_STX_ZP:
             stx_zp(&cpu6502);
             break;
