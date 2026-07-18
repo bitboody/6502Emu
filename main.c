@@ -15,6 +15,7 @@
 // Instructions
 #define OP_BRK 0x00
 #define OP_CLC 0x18
+#define OP_SEC 0x38
 
 #define OP_LDA_IMM 0xA9
 #define OP_LDA_ABS 0xAD
@@ -58,6 +59,15 @@
 #define OP_ADC_INDIR_X 0x61
 #define OP_ADC_INDIR_Y 0x71
 
+#define OP_SBC_IMM 0xE9
+#define OP_SBC_ABS 0xED
+#define OP_SBC_ABS_X 0xFD
+#define OP_SBC_ABS_Y 0xF9
+#define OP_SBC_ZP 0xE5
+#define OP_SBC_ZP_X 0xF5
+#define OP_SBC_INDIR_X 0xE1
+#define OP_SBC_INDIR_Y 0xF1
+
 uint8_t memory[65536];
 
 typedef struct
@@ -93,6 +103,14 @@ void update_c(CPU *cpu, int16_t value)
         cpu->P &= ~FLAG_C;
 }
 
+void update_c_sbc(CPU *cpu, uint8_t old_a, uint8_t borrow, int16_t value)
+{
+    if (old_a >= value + borrow)
+        cpu->P |= FLAG_C;
+    else
+        cpu->P &= ~FLAG_C;
+}
+
 void update_v(CPU *cpu, uint8_t a, uint8_t b, uint8_t result)
 {
     if (~(a ^ b) & (a ^ result) & 0x80)
@@ -100,6 +118,15 @@ void update_v(CPU *cpu, uint8_t a, uint8_t b, uint8_t result)
     else
         cpu->P &= ~FLAG_V;
 }
+
+void update_v_sbc(CPU *cpu, uint8_t a, uint8_t b, uint8_t result)
+{
+    if ((a ^ b) & (a ^ result) & 0x80)
+        cpu->P |= FLAG_V;
+    else
+        cpu->P &= ~FLAG_V;
+}
+
 
 uint16_t fetch_word(CPU *cpu)
 {
@@ -113,6 +140,11 @@ uint16_t fetch_word(CPU *cpu)
 void clc(CPU *cpu)
 {
     update_c(cpu, 0);
+}
+
+void sec(CPU *cpu)
+{
+    cpu->P |= FLAG_C;
 }
 
 void lda_imm(CPU *cpu)
@@ -430,7 +462,7 @@ void adc_indir_x(CPU *cpu)
 
     uint8_t low = memory[(uint8_t)operand];
     uint8_t high = memory[(uint8_t)(operand + 1)];
-    uint16_t addr = low | (high << 8);
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
     uint8_t value = memory[addr];
 
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
@@ -453,8 +485,7 @@ void adc_indir_y(CPU *cpu)
 
     uint8_t low = memory[(uint8_t)operand];
     uint8_t high = memory[(uint8_t)(operand + 1)];
-
-    uint16_t addr = (low | (high << 8)) + cpu->Y;
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
     uint8_t value = memory[addr];
 
     uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
@@ -469,6 +500,168 @@ void adc_indir_y(CPU *cpu)
     update_zn(cpu, cpu->A);
 }
 
+void sbc_imm(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint8_t value = memory[cpu->PC++];
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_abs(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint16_t addr = fetch_word(cpu);
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t value = memory[addr];
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_abs_x(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint16_t addr = fetch_word(cpu) + cpu->X;
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t value = memory[addr];
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_abs_y(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint16_t addr = fetch_word(cpu) + cpu->Y;
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t value = memory[addr];
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_zp(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint8_t addr = memory[cpu->PC++];
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t value = memory[addr];
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_zp_x(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t value = memory[addr];
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_indir_x(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint8_t operand = memory[cpu->PC++] + cpu->X;
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+    uint8_t value = memory[addr];
+
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
+void sbc_indir_y(CPU *cpu)
+{
+    uint8_t old_a = cpu->A;
+
+    uint8_t operand = memory[cpu->PC++];
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
+    uint8_t value = memory[addr];
+
+    uint8_t carry = (cpu->P & FLAG_C) ? 1 : 0;
+    uint8_t borrow = 1 - carry;
+
+    uint16_t result = old_a - value - borrow;
+
+    update_c_sbc(cpu, old_a, borrow, value);
+
+    cpu->A = (uint8_t)result;
+
+    update_v_sbc(cpu, old_a, value, cpu->A);
+    update_zn(cpu, cpu->A);
+}
+
 int main()
 {
     CPU cpu6502;
@@ -476,58 +669,21 @@ int main()
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
     // Tests
+    uint16_t i = 0;
 
-    // ----- Setup data -----
-    memory[0x1000] = 0x00;
-    memory[0x1005] = 0x00;
-    memory[0x1003] = 0x00;
-    memory[0x2000] = 0x00;
-    memory[0x3002] = 0x00;
+    // LDA #$80
+    memory[i++] = 0xA9;
+    memory[i++] = 0x80;
 
-    // Pointer for STA ($40,X)
-    memory[0x44] = 0x00;
-    memory[0x45] = 0x20;
+    // SEC
+    memory[i++] = 0x38;
 
-    // Pointer for STA ($50),Y
-    memory[0x50] = 0x00;
-    memory[0x51] = 0x30;
+    // SBC #$01
+    memory[i++] = 0xE9;
+    memory[i++] = 0x01;
 
-    // ----- Program -----
-
-    memory[0] = 0xA9; // LDA #$42
-    memory[1] = 0x42;
-
-    memory[2] = 0x85; // STA $20
-    memory[3] = 0x20;
-
-    memory[4] = 0xA2; // LDX #$05
-    memory[5] = 0x05;
-
-    memory[6] = 0x95; // STA $20,X
-    memory[7] = 0x20;
-
-    memory[8] = 0x8D; // STA $1000
-    memory[9] = 0x00;
-    memory[10] = 0x10;
-
-    memory[11] = 0x9D; // STA $1000,X
-    memory[12] = 0x00;
-    memory[13] = 0x10;
-
-    memory[14] = 0xA0; // LDY #$03
-    memory[15] = 0x03;
-
-    memory[16] = 0x99; // STA $1000,Y
-    memory[17] = 0x00;
-    memory[18] = 0x10;
-
-    memory[19] = 0x81; // STA ($40,X)
-    memory[20] = 0x3F; // 0x3F + X = 0x44
-
-    memory[21] = 0x91; // STA ($50),Y
-    memory[22] = 0x50;
-
-    memory[23] = 0x00; // BRK
+    // BRK
+    memory[i++] = 0x00;
 
     uint8_t opcode;
     int done = 0;
@@ -539,6 +695,12 @@ int main()
         {
         case OP_BRK:
             done = 1;
+            break;
+        case OP_CLC:
+            clc(&cpu6502);
+            break;
+        case OP_SEC:
+            sec(&cpu6502);
             break;
 
             /* ========= LOAD ========= */
@@ -666,6 +828,33 @@ int main()
             break;
         case OP_ADC_INDIR_Y:
             adc_indir_y(&cpu6502);
+            break;
+
+            /* ========= SBC ========= */
+
+        case OP_SBC_IMM:
+            sbc_imm(&cpu6502);
+            break;
+        case OP_SBC_ZP:
+            sbc_zp(&cpu6502);
+            break;
+        case OP_SBC_ZP_X:
+            sbc_zp_x(&cpu6502);
+            break;
+        case OP_SBC_ABS:
+            sbc_abs(&cpu6502);
+            break;
+        case OP_SBC_ABS_X:
+            sbc_abs_x(&cpu6502);
+            break;
+        case OP_SBC_ABS_Y:
+            sbc_abs_y(&cpu6502);
+            break;
+        case OP_SBC_INDIR_X:
+            sbc_indir_x(&cpu6502);
+            break;
+        case OP_SBC_INDIR_Y:
+            sbc_indir_y(&cpu6502);
             break;
 
         default:
