@@ -108,9 +108,9 @@ void update_c(CPU *cpu, int16_t value)
         cpu->P &= ~FLAG_C;
 }
 
-void update_c_sbc(CPU *cpu, uint8_t old_a, uint8_t borrow, int16_t value)
+void update_c_sbc(CPU *cpu, uint8_t old_a, uint8_t borrow, int16_t operand)
 {
-    if (old_a >= value + borrow)
+    if (old_a >= operand + borrow)
         cpu->P |= FLAG_C;
     else
         cpu->P &= ~FLAG_C;
