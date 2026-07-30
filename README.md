@@ -4,6 +4,6 @@
 # TODO:
 - [ ] Implement a ROM file reader
 - [X] Implement STY & STA
-- [ ] Implement SBC
+- [X] Implement SBC
 - [ ] Implement JMP
 - [ ] Implement Flag Instructions (CLC, SEC, etc..)
