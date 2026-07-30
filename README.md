@@ -6,4 +6,4 @@
 - [X] Implement STY & STA
 - [X] Implement SBC
 - [ ] Implement JMP
-- [ ] Implement Flag Instructions (CLC, SEC, etc..)
+- [X] Implement Flag Instructions (CLC, SEC, etc..)

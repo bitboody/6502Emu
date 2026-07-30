@@ -16,6 +16,11 @@
 #define OP_BRK 0x00
 #define OP_CLC 0x18
 #define OP_SEC 0x38
+#define OP_CLI 0x58
+#define OP_SEI 0x78
+#define OP_CLV 0xB8
+#define OP_CLD 0xD8
+#define OP_SED 0xF8
 
 #define OP_LDA_IMM 0xA9
 #define OP_LDA_ABS 0xAD
@@ -127,7 +132,6 @@ void update_v_sbc(CPU *cpu, uint8_t a, uint8_t b, uint8_t result)
         cpu->P &= ~FLAG_V;
 }
 
-
 uint16_t fetch_word(CPU *cpu)
 {
     uint16_t addr = memory[cpu->PC] | (memory[cpu->PC + 1] << 8);
@@ -139,12 +143,37 @@ uint16_t fetch_word(CPU *cpu)
 // Instruction set
 void clc(CPU *cpu)
 {
-    update_c(cpu, 0);
+    cpu->P &= ~FLAG_C;
 }
 
 void sec(CPU *cpu)
 {
     cpu->P |= FLAG_C;
+}
+
+void cli(CPU *cpu)
+{
+    cpu->P &= ~FLAG_I;
+}
+
+void sei(CPU *cpu)
+{
+    cpu->P |= FLAG_I;
+}
+
+void clv(CPU *cpu)
+{
+    cpu->P &= ~FLAG_V;
+}
+
+void cld(CPU *cpu)
+{
+    cpu->P &= ~FLAG_D;
+}
+
+void sed(CPU *cpu)
+{
+    cpu->P |= FLAG_D;
 }
 
 void lda_imm(CPU *cpu)
@@ -701,6 +730,21 @@ int main()
             break;
         case OP_SEC:
             sec(&cpu6502);
+            break;
+        case OP_CLI:
+            cli(&cpu6502);
+            break;
+        case OP_SEI:
+            sei(&cpu6502);
+            break;
+        case OP_CLV:
+            clv(&cpu6502);
+            break;
+        case OP_CLD:
+            cld(&cpu6502);
+            break;
+        case OP_SED:
+            sed(&cpu6502);
             break;
 
             /* ========= LOAD ========= */
