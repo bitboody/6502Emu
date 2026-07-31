@@ -73,6 +73,9 @@
 #define OP_SBC_INDIR_X 0xE1
 #define OP_SBC_INDIR_Y 0xF1
 
+#define OP_JMP_ABS 0x4C
+#define OP_JMP_INDIR 0x6C
+
 uint8_t memory[65536];
 
 typedef struct
@@ -691,28 +694,42 @@ void sbc_indir_y(CPU *cpu)
     update_zn(cpu, cpu->A);
 }
 
+void jmp_abs(CPU *cpu)
+{
+    cpu->PC = fetch_word(cpu);
+}
+
+void jmp_indir(CPU *cpu)
+{
+    uint16_t ptr = fetch_word(cpu);
+
+    uint8_t low = memory[ptr];
+    uint16_t high_addr = (ptr & 0xFF00) | ((ptr + 1) & 0x00FF);
+    uint8_t high = memory[high_addr];
+
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8));
+
+    cpu->PC = addr;
+}
+
 int main()
 {
     CPU cpu6502;
     memset(&cpu6502, 0, sizeof(cpu6502)); // Initialize CPU registers 0
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
-    // Tests
-    uint16_t i = 0;
+    memory[0x0000] = OP_JMP_ABS;
+    memory[0x0001] = 0x34;
+    memory[0x0002] = 0x12;
 
-    // LDA #$80
-    memory[i++] = 0xA9;
-    memory[i++] = 0x80;
+    memory[0x1234] = OP_JMP_INDIR;
+    memory[0x1235] = 0xFF;
+    memory[0x1236] = 0x12;
 
-    // SEC
-    memory[i++] = 0x38;
+    memory[0x12FF] = 0x78;
+    memory[0x1200] = 0x56;
 
-    // SBC #$01
-    memory[i++] = 0xE9;
-    memory[i++] = 0x01;
-
-    // BRK
-    memory[i++] = 0x00;
+    memory[0x5678] = OP_BRK;
 
     uint8_t opcode;
     int done = 0;
@@ -901,6 +918,15 @@ int main()
             sbc_indir_y(&cpu6502);
             break;
 
+            /* ========= JMP ========= */
+
+        case OP_JMP_ABS:
+            jmp_abs(&cpu6502);
+            break;
+        case OP_JMP_INDIR:
+            jmp_indir(&cpu6502);
+            break;
+
         default:
             printf("Unknown opcode: 0x%02X\n", opcode);
             done = 1;
@@ -924,7 +950,7 @@ int main()
         (cpu6502.P & FLAG_C) != 0,
         cpu6502.P);
 
-    printf("PC: %d\n", cpu6502.PC);
+    printf("PC: 0x%02X (%d decimal)\n", cpu6502.PC, cpu6502.PC);
 
     return 0;
 }
