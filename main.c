@@ -29,6 +29,15 @@
 #define OP_LDY_IMM 0xA0
 #define OP_LDY_ABS 0xAC
 
+#define OP_AND_INDIR_X 0x21
+#define OP_AND_ZP 0x25
+#define OP_AND_IMM 0x29
+#define OP_AND_ZP_X 0x35
+#define OP_AND_ABS 0x2D
+#define OP_AND_INDIR_Y 0x31
+#define OP_AND_ABS_Y 0x39
+#define OP_AND_ABS_X 0x3D
+
 #define OP_TAX 0xAA
 #define OP_TAY 0xA8
 #define OP_TYA 0x98
@@ -177,6 +186,79 @@ void cld(CPU *cpu)
 void sed(CPU *cpu)
 {
     cpu->P |= FLAG_D;
+}
+
+void and_imm(CPU *cpu)
+{
+    cpu->A &= memory[cpu->PC++];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_zp_x(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_abs(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu);
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_abs_x(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->X;
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_abs_y(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->Y;
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_indir_x(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++] + cpu->X;
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void and_indir_y(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++];
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
+
+    cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
 }
 
 void lda_imm(CPU *cpu)
@@ -718,18 +800,43 @@ int main()
     memset(&cpu6502, 0, sizeof(cpu6502)); // Initialize CPU registers 0
     memset(&memory, 0, sizeof(memory));   // Initialize memory 0
 
-    memory[0x0000] = OP_JMP_ABS;
-    memory[0x0001] = 0x34;
-    memory[0x0002] = 0x12;
+    memory[0x0000] = OP_LDA_IMM;
+    memory[0x0001] = 0xFF;
+    memory[0x0002] = OP_AND_IMM;
+    memory[0x0003] = 0xF0;
+    memory[0x0004] = OP_AND_ZP;
+    memory[0x0005] = 0x40;
+    memory[0x0006] = OP_LDX_IMM;
+    memory[0x0007] = 0x01;
+    memory[0x0008] = OP_AND_ZP_X;
+    memory[0x0009] = 0x40;
+    memory[0x000A] = OP_AND_ABS;
+    memory[0x000B] = 0x00;
+    memory[0x000C] = 0x20;
+    memory[0x000D] = OP_AND_ABS_X;
+    memory[0x000E] = 0x00;
+    memory[0x000F] = 0x20;
+    memory[0x0010] = OP_LDY_IMM;
+    memory[0x0011] = 0x01;
+    memory[0x0012] = OP_AND_ABS_Y;
+    memory[0x0013] = 0x00;
+    memory[0x0014] = 0x20;
+    memory[0x0015] = OP_AND_INDIR_X;
+    memory[0x0016] = 0x1F;
+    memory[0x0017] = OP_AND_INDIR_Y;
+    memory[0x0018] = 0x22;
+    memory[0x0019] = OP_BRK;
 
-    memory[0x1234] = OP_JMP_INDIR;
-    memory[0x1235] = 0xFF;
-    memory[0x1236] = 0x12;
-
-    memory[0x12FF] = 0x78;
-    memory[0x1200] = 0x56;
-
-    memory[0x5678] = OP_BRK;
+    memory[0x0040] = 0xF3;
+    memory[0x0041] = 0xCF;
+    memory[0x2000] = 0xBF;
+    memory[0x2001] = 0xF7;
+    memory[0x0020] = 0x00;
+    memory[0x0021] = 0x30;
+    memory[0x0022] = 0x00;
+    memory[0x0023] = 0x30;
+    memory[0x3000] = 0xDF;
+    memory[0x3001] = 0x80;
 
     uint8_t opcode;
     int done = 0;
@@ -788,6 +895,31 @@ int main()
             break;
 
             /* ======== TRANSFER ======== */
+
+        case OP_AND_IMM:
+            and_imm(&cpu6502);
+            break;
+        case OP_AND_ZP:
+            and_zp(&cpu6502);
+            break;
+        case OP_AND_ZP_X:
+            and_zp_x(&cpu6502);
+            break;
+        case OP_AND_ABS:
+            and_abs(&cpu6502);
+            break;
+        case OP_AND_ABS_X:
+            and_abs_x(&cpu6502);
+            break;
+        case OP_AND_ABS_Y:
+            and_abs_y(&cpu6502);
+            break;
+        case OP_AND_INDIR_X:
+            and_indir_x(&cpu6502);
+            break;
+        case OP_AND_INDIR_Y:
+            and_indir_y(&cpu6502);
+            break;
 
         case OP_TAX:
             tax(&cpu6502);

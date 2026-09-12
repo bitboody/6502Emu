@@ -7,4 +7,4 @@
 - [X] Implement SBC
 - [X] Implement JMP
 - [X] Implement Flag Instructions (CLC, SEC, etc..)
-- [ ] Implement logic Instructions (AND, ORA, etc..)
+- [ ] Implement logic Instructions (ORA, etc..)
