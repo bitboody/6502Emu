@@ -38,6 +38,24 @@
 #define OP_AND_ABS_Y 0x39
 #define OP_AND_ABS_X 0x3D
 
+#define OP_ORA_INDIR_X 0x01
+#define OP_ORA_ZP 0x05
+#define OP_ORA_IMM 0x09
+#define OP_ORA_ZP_X 0x15
+#define OP_ORA_ABS 0x0D
+#define OP_ORA_INDIR_Y 0x11
+#define OP_ORA_ABS_Y 0x19
+#define OP_ORA_ABS_X 0x1D
+
+#define OP_EOR_INDIR_X 0x41
+#define OP_EOR_ZP 0x45
+#define OP_EOR_IMM 0x49
+#define OP_EOR_ZP_X 0x55
+#define OP_EOR_ABS 0x4D
+#define OP_EOR_INDIR_Y 0x51
+#define OP_EOR_ABS_Y 0x59
+#define OP_EOR_ABS_X 0x5D
+
 #define OP_TAX 0xAA
 #define OP_TAY 0xA8
 #define OP_TYA 0x98
@@ -257,6 +275,152 @@ void and_indir_y(CPU *cpu)
     uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
 
     cpu->A &= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_imm(CPU *cpu)
+{
+    cpu->A |= memory[cpu->PC++];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_zp_x(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_abs(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu);
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_abs_x(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->X;
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_abs_y(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->Y;
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_indir_x(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++] + cpu->X;
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void ora_indir_y(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++];
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
+
+    cpu->A |= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_imm(CPU *cpu)
+{
+    cpu->A ^= memory[cpu->PC++];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_zp(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++];
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_zp_x(CPU *cpu)
+{
+    uint8_t addr = memory[cpu->PC++] + cpu->X;
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_abs(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu);
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_abs_x(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->X;
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_abs_y(CPU *cpu)
+{
+    uint16_t addr = fetch_word(cpu) + cpu->Y;
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_indir_x(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++] + cpu->X;
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+
+    cpu->A ^= memory[addr];
+
+    update_zn(cpu, cpu->A);
+}
+
+void eor_indir_y(CPU *cpu)
+{
+    uint8_t operand = memory[cpu->PC++];
+
+    uint8_t low = memory[(uint8_t)operand];
+    uint8_t high = memory[(uint8_t)(operand + 1)];
+    uint16_t addr = ((uint16_t)low | ((uint16_t)high << 8)) + cpu->Y;
+
+    cpu->A ^= memory[addr];
 
     update_zn(cpu, cpu->A);
 }
@@ -919,6 +1083,56 @@ int main()
             break;
         case OP_AND_INDIR_Y:
             and_indir_y(&cpu6502);
+            break;
+
+        case OP_ORA_IMM:
+            ora_imm(&cpu6502);
+            break;
+        case OP_ORA_ZP:
+            ora_zp(&cpu6502);
+            break;
+        case OP_ORA_ZP_X:
+            ora_zp_x(&cpu6502);
+            break;
+        case OP_ORA_ABS:
+            ora_abs(&cpu6502);
+            break;
+        case OP_ORA_ABS_X:
+            ora_abs_x(&cpu6502);
+            break;
+        case OP_ORA_ABS_Y:
+            ora_abs_y(&cpu6502);
+            break;
+        case OP_ORA_INDIR_X:
+            ora_indir_x(&cpu6502);
+            break;
+        case OP_ORA_INDIR_Y:
+            ora_indir_y(&cpu6502);
+            break;
+
+        case OP_EOR_IMM:
+            eor_imm(&cpu6502);
+            break;
+        case OP_EOR_ZP:
+            eor_zp(&cpu6502);
+            break;
+        case OP_EOR_ZP_X:
+            eor_zp_x(&cpu6502);
+            break;
+        case OP_EOR_ABS:
+            eor_abs(&cpu6502);
+            break;
+        case OP_EOR_ABS_X:
+            eor_abs_x(&cpu6502);
+            break;
+        case OP_EOR_ABS_Y:
+            eor_abs_y(&cpu6502);
+            break;
+        case OP_EOR_INDIR_X:
+            eor_indir_x(&cpu6502);
+            break;
+        case OP_EOR_INDIR_Y:
+            eor_indir_y(&cpu6502);
             break;
 
         case OP_TAX:
